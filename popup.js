@@ -1,30 +1,30 @@
 import { getActiveTabURL } from "./utils.js";
 
 // adding a new bookmark row to the popup
-const addNewBookmark = (bookmarkElement, bookmark) => {
-    const bookmarkTitleElement = document.createElement('div');   //for displaying title
+const addNewBookmark = (bookmarks, bookmark) => {
+    const bookmarkTitleElement = document.createElement("div");   //for displaying title
     const controlsElement = document.createElement("div");        //for play and delete button
-    const newBookmarkElement = document.createElement('div');     //this will contain title play button basically entire bookmark
+    const newBookmarkElement = document.createElement("div");     //this will contain title play button basically entire bookmark
 
     bookmarkTitleElement.textContent = bookmark.desc;             //in contentscript inside newbookmarkhandler func we created newBookmark obj which have desc value
     bookmarkTitleElement.className = "bookmark-title";
     controlsElement.className = "bookmark-controls";
 
-    setBookmarkAttributes("play-button", onPlay, controlsElement);
+    setBookmarkAttributes("play", onPlay, controlsElement);
     setBookmarkAttributes("delete", onDelete, controlsElement);
 
     newBookmarkElement.id = "bookmark-" + bookmark.time;          //in contentscript inside newbookmarkhandler func we created newBookmark obj which have time value
-    newBookmarkElement.className="bookmark"
+    newBookmarkElement.className="bookmark";
     newBookmarkElement.setAttribute('timestamp', bookmark.time);
 
     newBookmarkElement.appendChild(bookmarkTitleElement);
     newBookmarkElement.appendChild(controlsElement);
 
-    bookmarkElement.appendChild(newBookmarkElement);
+    bookmarks.appendChild(newBookmarkElement);
 };
 
 const viewBookmarks = (currentBookmarks = []) => {
-    const bookmarkElement = document.getElementById('bookmarks');    //get the bookmark div(bookmark div present in popup.html to show bookmarks)
+    const bookmarkElement = document.getElementById("bookmarks");    //get the bookmark div(bookmark div present in popup.html to show bookmarks)
     bookmarkElement.innerHTML = "";
 
     //if we have already bookmarks present in our array currentBookmarks for a video
@@ -51,7 +51,7 @@ const onPlay = async e => {
     });
   };
   
-  const onDelete = async (e) => {
+const onDelete = async (e) => {
     const activeTab = await getActiveTabURL();
     const bookmarkTime = e.target.parentNode.parentNode.getAttribute("timestamp");
     const bookmarkElementToDelete = document.getElementById("bookmark-" + bookmarkTime);
@@ -62,21 +62,10 @@ const onPlay = async e => {
     const urlParameter = new URLSearchParams(queryParameter);
     const currentVideoId = urlParameter.get("v");
 
-    chrome.storage.sync.get([currentVideoId], (data) => {
-        let currentBookmarks = data[currentVideoId] ? JSON.parse(data[currentVideoId]) : [];
-        currentBookmarks = currentBookmarks.filter((bookmark) => bookmark.time != bookmarkTime);
-
-        // Update storage
-        chrome.storage.sync.set({ [currentVideoId]: JSON.stringify(currentBookmarks) });
-
-        // Refresh bookmarks
-        viewBookmarks(currentBookmarks);
-    });
-
     chrome.tabs.sendMessage(activeTab.id, {
         type: "DELETE",
         value: bookmarkTime,
-    });
+      }, viewBookmarks);
 };
 
   
@@ -96,13 +85,13 @@ document.addEventListener("DOMContentLoaded", async() =>{
     const queryParameter = activeTab.url.split("?")[1];               
     const urlParameter = new URLSearchParams(queryParameter);  
     
-    const currentVideoId = urlParameter.get("v");
+    const currentVideo = urlParameter.get("v");
 
     //if the tab is youtube then we show the bookmarks
-    if(activeTab.url.includes("youtube.com/watch") && currentVideoId){
+    if(activeTab.url.includes("youtube.com/watch") && currentVideo){
         //fetch the bookmarks from chrome storage
-        chrome.storage.sync.get([currentVideoId], (data)=>{
-            const currentVideoBookmark = data[currentVideoId] ? JSON.parse(data[currentVideoId]) : [];
+        chrome.storage.sync.get([currentVideo], (data)=>{
+            const currentVideoBookmark = data[currentVideo] ? JSON.parse(data[currentVideo]) : [];
             
             //show the bookmarks to user(in popup window)
             viewBookmarks(currentVideoBookmark);
@@ -110,13 +99,13 @@ document.addEventListener("DOMContentLoaded", async() =>{
     }
     //if the tab is not youtube then we will show some msg
     else{
-        const container = document.getElementsByClassName('container')[0];
+        const container = document.getElementsByClassName("container")[0];
         container.innerHTML = '<div class="title">Not a youtube Page😪</div> ';
-        // Apply some basic styles
-        container.style.display = "flex";
-        container.style.flexDirection = "column";
-        container.style.alignItems = "center";
-        container.style.justifyContent = "center";
-        container.style.marginTop = "20px";
+        // // Apply some basic styles
+        // container.style.display = "flex";
+        // container.style.flexDirection = "column";
+        // container.style.alignItems = "center";
+        // container.style.justifyContent = "center";
+        // container.style.marginTop = "20px";
     }
 });
