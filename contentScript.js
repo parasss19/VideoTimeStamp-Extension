@@ -2,7 +2,7 @@
 (()=>{
     let youtubeLeftControls, youtubePlayer;
     let currentVideo = "";                   //used to store the ID of the currently loaded video.
-    let currentVideoBookmark = [];           //used to store all video bookmark
+    let currentVideoBookmarks = [];           //used to store all video bookmark
     
     //fetch the bookmarks from chrome storage
     const fetchBookmarks = () =>{
@@ -15,22 +15,22 @@
 
     //function to handle the new bookmark
     const newBookmarkHandler = async() => {
-        const currTime = youtubePlayer.currentTime;     //currentTime is a property of the video player that returns the current playback time in seconds
+        const currentTime = youtubePlayer.currentTime;     //currentTime is a property of the video player that returns the current playback time in seconds
         //newBookmark obj
         const newBookmark = {
-          time : currTime,
-          desc : "Bookmark at :" + getTime(currTime)     //getTime function to format currentTime into a human-readable time (e.g., 00:02:03).
+          time : currentTime,
+          desc : "Bookmark at " + getTime(currentTime),     //getTime function to format currentTime into a human-readable time (e.g., 00:02:03).
         }
   
-        currentVideoBookmark = await fetchBookmarks();
+        currentVideoBookmarks = await fetchBookmarks();
   
         //Sync Bookmarks with Chrome Storage
-        //1 Access or Create the Bookmark List = currentVideoBookmark is the existing list of bookmarks for this video.
-        //2 Add the New Bookmark = The new bookmark is added to the existing list using the spread operator [...currentVideoBookmark, newBookmark].
+        //1 Access or Create the Bookmark List = currentVideoBookmarks is the existing list of bookmarks for this video.
+        //2 Add the New Bookmark = The new bookmark is added to the existing list using the spread operator [...currentVideoBookmarks, newBookmark].
         //3 Sort bookmark = The list is sorted in ascending order by time so that earlier bookmarks come first .sort((a, b) => a.time - b.time)
         //4 Store the Updated List in Chrome Storage: JSON.stringify(updatedBookmarks)
         chrome.storage.sync.set({
-         [currentVideo] : JSON.stringify([...currentVideoBookmark, newBookmark].sort((a, b) => a.time - b.time))
+         [currentVideo] : JSON.stringify([...currentVideoBookmarks, newBookmark].sort((a, b) => a.time - b.time))
         });
     }
   
@@ -38,16 +38,17 @@
     const newVideoLoaded = async() => {
       const bookmarkBtnExists = document.getElementsByClassName("bookmark-btn")[0];    //check if the bookmark button already exists.
       
-      currentVideoBookmark = await fetchBookmarks();
+      currentVideoBookmarks = await fetchBookmarks();
 
       if(!bookmarkBtnExists){                                                          //if the bookmark button not exists.
         const bookmarkBtn = document.createElement("img");                          //create a new img element for the bookmark button.
+
         bookmarkBtn.src = chrome.runtime.getURL("assets/bookmark.png");             //set the path of the bookmark image.
         bookmarkBtn.className = "ytp-button " + "bookmark-btn";                      //set the class name of the bookmark button.
         bookmarkBtn.title = "Click to bookmark current timestamp";                                             
         
         youtubeLeftControls = document.getElementsByClassName("ytp-left-controls")[0];   //get the left controls of the youtube player(yt store its left control in class = "ytp-left-controls").
-        youtubePlayer = document.getElementsByClassName("video-stream")[0];              //get the youtube player(yt store its player in class = "video-stream") it is basically the entire video screen
+        youtubePlayer =  document.getElementsByClassName('video-stream')[0];              //get the youtube player(yt store its player in class = "video-stream") it is basically the entire video screen
 
         youtubeLeftControls.appendChild(bookmarkBtn);                                   //append the bookmark button to the left controls of the youtube player.
         bookmarkBtn.addEventListener("click", newBookmarkHandler);                      //
@@ -64,10 +65,10 @@
       } else if (type === "PLAY") {
         youtubePlayer.currentTime = value;
       } else if ( type === "DELETE") {
-        currentVideoBookmark = currentVideoBookmark.filter((b) => b.time != value);
-        chrome.storage.sync.set({ [currentVideo]: JSON.stringify(currentVideoBookmark) });
+        currentVideoBookmarks = currentVideoBookmarks.filter((b) => b.time != value);
+        chrome.storage.sync.set({ [currentVideo]: JSON.stringify(currentVideoBookmarks) });
   
-        response(currentVideoBookmark);
+        response(currentVideoBookmarks);
       }
     });
 
